@@ -12,12 +12,10 @@ export default {
       file: pkg.main,
       format: "cjs",
     },
-    {
-      file: pkg.module,
-      format: "es",
-    },
   ],
-  external: pkg.dependencies ? Object.keys(pkg.dependencies) : [],
+  external: (pkg.dependencies ? Object.keys(pkg.dependencies) : []).concat(
+    "path"
+  ),
   plugins: [
     json(),
     babel({

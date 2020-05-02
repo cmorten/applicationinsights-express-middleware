@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [0.0.4] - 02-05-2020
+
+### Updated
+
+- Fixed bug with error middleware.
+- Split code into separate units.
+
 ## [0.0.3] - 02-05-2020
 
 ### Updated
