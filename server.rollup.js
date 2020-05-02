@@ -26,7 +26,9 @@ export default {
     nodeResolve({
       preferBuiltins: true,
     }),
-    commonjs(),
+    commonjs({
+      include: [/node_modules/],
+    }),
     terser(),
   ],
 };

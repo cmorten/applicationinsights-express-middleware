@@ -1,38 +1,40 @@
+const path = require("path");
 const express = require("express");
 const httpMethods = require("methods");
-const httpAndExpressMethods = [...httpMethods, "all"];
+
+const httpAndExpressMethods = ["all"].concat(httpMethods);
 
 const AI_WRAPPED_KEY = Symbol("AI_WRAPPED_KEY");
 
-const getName = (thing) => thing.name || "<anonymous>";
+const getName = (objectLike) =>
+  objectLike && objectLike.name ? objectLike.name : "<anonymous>";
+
 const setWrapped = (objectLike) => {
   Object.defineProperty(objectLike, AI_WRAPPED_KEY, {
-    configurable: true,
     enumerable: false,
-    writable: true,
     value: true,
   });
 
   return objectLike;
 };
+
 const isWrapped = (objectLike) => objectLike[AI_WRAPPED_KEY] === true;
 
-function wrapMiddleware(middleware, path, defaultPath) {
-  const name = getName(middleware);
-  path = path || defaultPath;
+const isFunction = (functionLike) => typeof functionLike === "function";
 
-  return function (...args) {
-    this.name = name;
+function wrapMiddleware(middleware, target, name) {
+  setWrapped(middleware);
 
+  const wrappedMiddleware = function (...args) {
     const start = new Date();
-    middleware.call(this, ...args);
+    middleware(...args);
     const end = new Date();
     const duration = end - start;
 
     // eslint-disable-next-line no-console
     console.log({
       dependencyTypeName: "Express Middleware",
-      target: path,
+      target,
       name,
       data: "",
       duration,
@@ -41,51 +43,56 @@ function wrapMiddleware(middleware, path, defaultPath) {
       time: start,
     });
   };
+
+  return wrappedMiddleware.bind(middleware);
 }
 
-function wrapUse(subModuleMethod, defaultPath = "/") {
-  return function wrappedUse(...pathAndMiddlewares) {
-    const hasPath = typeof pathAndMiddlewares[0] !== "function";
-    const [path, ...unwrappedMiddlewares] = hasPath
-      ? [...pathAndMiddlewares]
-      : [null, ...pathAndMiddlewares];
-
-    function recursiveWrapMapper(middlewares) {
-      return middlewares.map((middleware) => {
-        if (Array.isArray(middleware)) {
-          return recursiveWrapMapper(middleware);
-        } else if (typeof middleware !== "function" || isWrapped(middleware)) {
-          return middleware;
-        }
-
-        const wrappedMiddleware = wrapMiddleware.call(
-          this,
-          middleware,
-          path,
-          defaultPath
-        );
-
-        return setWrapped(wrappedMiddleware);
-      });
+function recursiveMiddlewareWrapperMapper(middlewares, route) {
+  return middlewares.map((middleware) => {
+    if (Array.isArray(middleware)) {
+      return recursiveMiddlewareWrapperMapper(middleware, route);
+    } else if (!isFunction(middleware) || isWrapped(middleware)) {
+      return middleware;
     }
 
-    const wrappedMiddlewares = recursiveWrapMapper.call(
-      this,
-      unwrappedMiddlewares
+    return wrapMiddleware.call(
+      middleware,
+      middleware,
+      route,
+      getName(middleware)
+    );
+  });
+}
+
+function wrapMiddlewareUser(middlewareUser, routeBase = "/") {
+  return function wrappedUse(...pathAndMiddlewares) {
+    const hasPath = !isFunction(pathAndMiddlewares[0]);
+
+    const normalisedPathAndMiddlewares = hasPath
+      ? pathAndMiddlewares
+      : [""].concat(pathAndMiddlewares);
+
+    const routeSegment = normalisedPathAndMiddlewares.shift();
+
+    const route = path.join(routeBase, routeSegment);
+
+    const wrappedMiddlewares = recursiveMiddlewareWrapperMapper(
+      normalisedPathAndMiddlewares,
+      route
     );
 
     const wrappedArgs = hasPath
-      ? [path, ...wrappedMiddlewares]
-      : [...wrappedMiddlewares];
+      ? [routeSegment].concat(wrappedMiddlewares)
+      : wrappedMiddlewares;
 
-    return subModuleMethod.call(this, ...wrappedArgs);
+    return middlewareUser.apply(this, wrappedArgs);
   };
 }
 
 function wrapRoute(subModuleMethod) {
-  return function wrappedRoute(path, ...args) {
-    const router = subModuleMethod.call(this, path, ...args);
-    wrap(router, httpAndExpressMethods, wrapUse, path);
+  return function wrappedRoute(route, ...args) {
+    const router = subModuleMethod.call(this, route, ...args);
+    wrap(router, httpAndExpressMethods, wrapMiddlewareUser, route);
 
     return router;
   };
@@ -95,21 +102,16 @@ function wrap(subModule, methods, wrapper, ...args) {
   methods.forEach((method) => {
     const original = subModule[method];
 
-    if (!original) {
-      return;
-    }
-
-    if (!isWrapped(original)) {
-      const wrappedSubModule = wrapper(original, ...args);
-      subModule[method] = wrappedSubModule;
+    if (isFunction(original) && !isWrapped(original)) {
+      subModule[method] = wrapper(original, ...args);
       setWrapped(subModule[method]);
     }
   });
 }
 
-wrap(express.application, ["use"], wrapUse);
-wrap(express.Router, ["use"], wrapUse);
+wrap(express.application, ["use"], wrapMiddlewareUser);
+wrap(express.Router, ["use"], wrapMiddlewareUser);
 wrap(express.Router, ["route"], wrapRoute);
-wrap(express.Router, ["param"], wrapUse);
+wrap(express.Router, ["param"], wrapMiddlewareUser);
 
 module.exports = express;

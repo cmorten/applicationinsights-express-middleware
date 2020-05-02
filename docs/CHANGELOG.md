@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [0.0.3] - 02-05-2020
+
+### Updated
+
+- Fixed bug with `this` in the es5 bundle as a result of strict mode.
+- Code refactor to slim down bundle size.
+
 ## [0.0.2] - 02-05-2020
 
 ### Added
