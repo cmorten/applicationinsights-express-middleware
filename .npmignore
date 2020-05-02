@@ -1,0 +1,8 @@
+*
+!lib/*
+!typings/*
+!docs/CHANGELOG.md
+!LICENSE
+!package.json
+!yarn.lock
+!README.md

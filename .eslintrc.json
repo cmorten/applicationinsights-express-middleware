@@ -1,0 +1,37 @@
+{
+  "env": {
+    "es6": true,
+    "node": true,
+    "jest": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/recommended",
+    "plugin:jest/recommended",
+    "prettier"
+  ],
+  "parser": "babel-eslint",
+  "plugins": ["import", "jest", "prettier"],
+  "rules": {
+    "import/no-extraneous-dependencies": "error",
+    "no-console": "warn",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "import/prefer-default-export": "off",
+    "import/no-named-as-default": "off",
+    "linebreak-style": "off",
+    "prettier/prettier": "error",
+    "complexity": ["error", { "max": 5 }],
+    "import/unambiguous": "off",
+    "prefer-const": "error",
+    "no-var": "error",
+    "jest/no-identical-title": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ]
+}
