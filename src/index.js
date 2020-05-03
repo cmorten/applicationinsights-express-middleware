@@ -1,11 +1,40 @@
+import applicationinsights from "applicationinsights";
 import express from "express";
-import wrap from "./wrap";
-import wrapMiddlewareUser from "./wrapMiddlewareUser";
-import wrapRoute from "./wrapRoute";
+import patchMethods from "./patchMethods";
+import usePatch from "./usePatch";
+import routePatch from "./routePatch";
+import paramPatch from "./paramPatch";
 
-wrap(express.application, ["use"], wrapMiddlewareUser);
-wrap(express.Router, ["use"], wrapMiddlewareUser);
-wrap(express.Router, ["route"], wrapRoute);
-wrap(express.Router, ["param"], wrapMiddlewareUser, { nextIndex: 2 });
+let isExpressMiddleware = false;
 
-export default express;
+const enable = (isEnabled) => {
+  if (isEnabled) {
+    patchMethods(express.application, ["use"], usePatch);
+    patchMethods(express.Router, ["use"], usePatch);
+    patchMethods(express.Router, ["route"], routePatch);
+    patchMethods(express.Router, ["param"], paramPatch);
+  } else {
+    // TODO: dispose + unPatchMethods
+  }
+};
+
+applicationinsights.Configuration.setAutoCollectExpressMiddleware = (value) => {
+  isExpressMiddleware = value;
+
+  return applicationinsights.Configuration;
+};
+
+const startPatch = (start) => {
+  return function patchedStart(...startArgs) {
+    if (applicationinsights.defaultClient) {
+      enable(isExpressMiddleware);
+    }
+
+    return start.call(this, ...startArgs);
+  };
+};
+
+patchMethods(applicationinsights, ["start"], startPatch);
+patchMethods(applicationinsights.Configuration, ["start"], startPatch);
+
+export default applicationinsights;

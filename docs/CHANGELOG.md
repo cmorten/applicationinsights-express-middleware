@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [0.0.5] - 03-05-2020
+
+### Added
+
+- Monkey patch Application Insights with an additional `setAutoCollectExpressMiddleware(isEnabled)` method to enable instrumentation of Express middleware.
+- Package will now call `trackDependency()` and send Middleware data to App Insights.
+
+### Updated
+
+- Large code nomenclature refactor - "wrap" replaced with "patch".
+
 ## [0.0.4] - 02-05-2020
 
 ### Updated

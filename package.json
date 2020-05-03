@@ -1,6 +1,6 @@
 {
   "name": "applicationinsights-express-middleware",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Express Middleware tracking for Microsoft Application Insights SDK for Node.js.",
   "main": "lib/index.js",
   "types": "typings/index.d.ts",
@@ -36,6 +36,7 @@
     "prepublishOnly": "yarn ci"
   },
   "dependencies": {
+    "applicationinsights": "^1.7.5",
     "express": "^4.17.1",
     "methods": "^1.1.2"
   },
